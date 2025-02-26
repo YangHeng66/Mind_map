@@ -13,7 +13,6 @@ const nextConfig: NextConfig = {
   // 禁用跟踪功能
   experimental: {
     disableOptimizedLoading: true,
-    disablePostcssPresetEnv: true
   }
 };
 
