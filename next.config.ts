@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
     // 在构建过程中忽略TypeScript错误
     ignoreBuildErrors: true,
   },
+  // 禁用跟踪功能
+  experimental: {
+    disableOptimizedLoading: true,
+    disablePostcssPresetEnv: true
+  }
 };
 
 export default nextConfig;

@@ -7,7 +7,7 @@ import { MindMapNode } from '@/lib/deepseek';
 
 interface ExportOptionsProps {
     mindMapData: MindMapNode | null;
-    mindMapRef: React.RefObject<HTMLDivElement>;
+    mindMapRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export default function ExportOptions({ mindMapData, mindMapRef }: ExportOptionsProps) {
