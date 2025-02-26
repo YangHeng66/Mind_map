@@ -31,7 +31,7 @@ export default function Home() {
                             {/* 导出选项 */}
                             <ExportOptions
                                 mindMapData={mindMapData}
-                                mindMapRef={mindMapRef}
+                                mindMapRef={mindMapRef as React.RefObject<HTMLDivElement>}
                             />
 
                             {/* 操作指南 */}
