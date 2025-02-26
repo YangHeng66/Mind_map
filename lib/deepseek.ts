@@ -43,48 +43,81 @@ export class DeepSeekClient {
     }
 
     // 生成思维导图
-    async generateMindMap(topic: string, depth: number = 3): Promise<MindMapNode> {
-        try {
-            const prompt = this.createMindMapPrompt(topic, depth);
+    async generateMindMap(topic: string, depth: number = 3, retries = 2): Promise<MindMapNode> {
+        let lastError: any;
 
-            const response = await axios.post<DeepSeekResponse>(
-                `${this.apiUrl}/chat/completions`,
-                {
-                    model: 'deepseek-chat',
-                    messages: [
-                        {
-                            role: 'system',
-                            content: '你是一个专业的思维导图生成助手，擅长将主题拆解为结构化的思维导图。'
-                        },
-                        {
-                            role: 'user',
-                            content: prompt
-                        }
-                    ],
-                    temperature: 0.7,
-                    max_tokens: 2000
-                },
-                {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${this.apiKey}`
-                    }
+        for (let attempt = 0; attempt <= retries; attempt++) {
+            try {
+                const prompt = this.createMindMapPrompt(topic, depth);
+
+                // 如果不是第一次尝试，增加等待时间
+                if (attempt > 0) {
+                    await new Promise(resolve => setTimeout(resolve, attempt * 2000));
+                    console.log(`重试生成思维导图 (${attempt}/${retries})...`);
                 }
-            );
 
-            // 解析响应中的JSON字符串为思维导图数据
-            const content = response.data.choices[0].message.content;
-            const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
+                const response = await axios.post<DeepSeekResponse>(
+                    `${this.apiUrl}/chat/completions`,
+                    {
+                        model: 'deepseek-chat',
+                        messages: [
+                            {
+                                role: 'system',
+                                content: '你是一个专业的思维导图生成助手，擅长将主题拆解为结构化的思维导图。'
+                            },
+                            {
+                                role: 'user',
+                                content: prompt
+                            }
+                        ],
+                        temperature: 0.7,
+                        max_tokens: 2000
+                    },
+                    {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${this.apiKey}`
+                        },
+                        timeout: 60000 // 60秒超时
+                    }
+                );
 
-            if (jsonMatch && jsonMatch[1]) {
-                return JSON.parse(jsonMatch[1]) as MindMapNode;
+                // 验证响应数据结构
+                if (!response.data || !response.data.choices || response.data.choices.length === 0) {
+                    throw new Error('API返回的数据结构不完整');
+                }
+
+                const content = response.data.choices[0].message.content;
+                const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
+
+                if (jsonMatch && jsonMatch[1]) {
+                    return JSON.parse(jsonMatch[1]) as MindMapNode;
+                }
+
+                throw new Error('无法从响应中解析思维导图数据');
+            } catch (error) {
+                lastError = error;
+
+                // 如果是最后一次尝试，或者是不应该重试的错误，则直接抛出
+                if (attempt === retries ||
+                    (axios.isAxiosError(error) && error.response && error.response.status < 500)) {
+                    break;
+                }
             }
-
-            throw new Error('无法从响应中解析思维导图数据');
-        } catch (error) {
-            console.error('生成思维导图时出错:', error);
-            throw error;
         }
+
+        console.error('生成思维导图失败，已重试多次:', lastError);
+
+        if (axios.isAxiosError(lastError)) {
+            if (lastError.code === 'ECONNABORTED') {
+                throw new Error('请求超时，请稍后重试');
+            }
+            if (lastError.response) {
+                throw new Error(`API请求失败: ${lastError.response.status} - ${lastError.response.data?.error || lastError.message}`);
+            }
+        }
+
+        throw lastError;
     }
 
     // 创建思维导图提示词
