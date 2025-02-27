@@ -9,6 +9,7 @@ export interface HistoryItem {
     depth: number;
     timestamp: number;
     data: MindMapNode;
+    summary: string;
 }
 
 interface MindMapState {
@@ -17,16 +18,17 @@ interface MindMapState {
     loading: boolean;
     error: string | null;
     mindMapData: MindMapNode | null;
+    summary: string;
     history: HistoryItem[];
     setTopic: (topic: string) => void;
     setDepth: (depth: number) => void;
     setLoading: (loading: boolean) => void;
     setError: (error: string | null) => void;
-    setMindMapData: (data: MindMapNode | null) => void;
+    setMindMapData: (data: MindMapNode | null, summary?: string) => void;
     generateMindMap: () => Promise<void>;
     resetMindMap: () => void;
     // 新增历史记录相关方法
-    addToHistory: (data: MindMapNode) => void;
+    addToHistory: (data: MindMapNode, summary: string) => void;
     loadFromHistory: (id: string) => void;
     deleteFromHistory: (id: string) => void;
     clearHistory: () => void;
@@ -40,13 +42,14 @@ export const useMindMapStore = create<MindMapState>()(
             loading: false,
             error: null,
             mindMapData: null,
+            summary: '',
             history: [],
 
             setTopic: (topic) => set({ topic }),
             setDepth: (depth) => set({ depth }),
             setLoading: (loading) => set({ loading }),
             setError: (error) => set({ error }),
-            setMindMapData: (data) => set({ mindMapData: data }),
+            setMindMapData: (data, summary = '') => set({ mindMapData: data, summary }),
 
             generateMindMap: async () => {
                 const { topic, depth } = get();
@@ -72,12 +75,12 @@ export const useMindMapStore = create<MindMapState>()(
                         throw new Error(errorData.error || '生成思维导图失败');
                     }
 
-                    const { data } = await response.json();
-                    set({ mindMapData: data, loading: false });
+                    const { data, summary } = await response.json();
+                    set({ mindMapData: data, summary, loading: false });
 
                     // 添加到历史记录
                     if (data) {
-                        get().addToHistory(data);
+                        get().addToHistory(data, summary);
                     }
                 } catch (error: any) {
                     set({
@@ -89,11 +92,12 @@ export const useMindMapStore = create<MindMapState>()(
 
             resetMindMap: () => set({
                 mindMapData: null,
+                summary: '',
                 error: null
             }),
 
             // 添加到历史记录
-            addToHistory: (data) => {
+            addToHistory: (data, summary) => {
                 const { topic, depth, history } = get();
 
                 // 创建新的历史记录项
@@ -103,6 +107,7 @@ export const useMindMapStore = create<MindMapState>()(
                     depth,
                     timestamp: Date.now(),
                     data,
+                    summary
                 };
 
                 // 限制历史记录数量为20条
@@ -120,6 +125,7 @@ export const useMindMapStore = create<MindMapState>()(
                         topic: item.topic,
                         depth: item.depth,
                         mindMapData: item.data,
+                        summary: item.summary,
                         error: null,
                     });
                 }

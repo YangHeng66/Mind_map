@@ -11,9 +11,11 @@ import ReactFlow, {
     Background,
     Controls,
     MiniMap,
+    Panel
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { MindMapNode } from '@/lib/deepseek';
+import ExportOptions from './ExportOptions';
 
 // 节点间距 - 增加垂直间距
 const childSpacing = 80;
@@ -51,6 +53,7 @@ export default function HorizontalMindMap({ data }: MindMapProps) {
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const reactFlowInstanceRef = useRef<ReactFlowInstance | null>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     // 计算节点文本的近似宽度（用于布局优化）
     const estimateTextWidth = (text: string) => {
@@ -259,30 +262,39 @@ export default function HorizontalMindMap({ data }: MindMapProps) {
     }
 
     return (
-        <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onInit={onInit}
-            fitView
-            attributionPosition="bottom-right"
-            connectionLineType={ConnectionLineType.Straight} // 改为直线连接
-            defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
-            minZoom={0.05}
-            maxZoom={2}
-        >
-            <Background color="#f8f8f8" gap={16} />
-            <Controls />
-            <MiniMap
-                nodeStrokeColor={(n) => {
-                    return '#ddd';
-                }}
-                nodeColor={(n) => {
-                    return '#fff';
-                }}
-                nodeBorderRadius={30}
-            />
-        </ReactFlow>
+        <div ref={containerRef} className="w-full h-full relative">
+            <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onInit={onInit}
+                fitView
+                attributionPosition="bottom-right"
+                connectionLineType={ConnectionLineType.Straight} // 改为直线连接
+                defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
+                minZoom={0.05}
+                maxZoom={2}
+            >
+                <Background color="#f8f8f8" gap={16} />
+                <Controls />
+                <MiniMap
+                    nodeStrokeColor={(n) => {
+                        return '#ddd';
+                    }}
+                    nodeColor={(n) => {
+                        return '#fff';
+                    }}
+                    nodeBorderRadius={30}
+                />
+                <Panel position="top-right">
+                    <ExportOptions
+                        mindMapData={data}
+                        mindMapRef={containerRef}
+                        className="text-xs py-1 px-2"
+                    />
+                </Panel>
+            </ReactFlow>
+        </div>
     );
 } 

@@ -2,21 +2,24 @@
 
 import { useState } from 'react';
 import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 import { MindMapNode } from '@/lib/deepseek';
+import { ReactFlowInstance } from 'reactflow';
 
 interface ExportOptionsProps {
     mindMapData: MindMapNode | null;
     mindMapRef: React.RefObject<HTMLDivElement | null>;
+    className?: string;
 }
 
-export default function ExportOptions({ mindMapData, mindMapRef }: ExportOptionsProps) {
+export default function ExportOptions({ mindMapData, mindMapRef, className = '' }: ExportOptionsProps) {
     const [exporting, setExporting] = useState(false);
 
     // 导出前准备
     const prepareForExport = async () => {
-        // 获取ReactFlow实例
-        const reactFlowInstance = mindMapRef.current?.querySelector('.react-flow')?.__reactFlowInstance;
+        // 获取ReactFlow实例 - 使用类型断言解决类型问题
+        const flowElement = mindMapRef.current?.querySelector('.react-flow');
+        // @ts-ignore - ReactFlow在运行时会将__reactFlowInstance附加到DOM元素上
+        const reactFlowInstance = flowElement?.__reactFlowInstance as ReactFlowInstance | undefined;
 
         if (reactFlowInstance) {
             // 保存当前视图状态
@@ -28,7 +31,7 @@ export default function ExportOptions({ mindMapData, mindMapRef }: ExportOptions
             // 计算所有节点的边界
             let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 
-            allNodes.forEach(node => {
+            allNodes.forEach((node: any) => {
                 const nodeWidth = node.width || 150;
                 const nodeHeight = node.height || 50;
 
@@ -38,11 +41,11 @@ export default function ExportOptions({ mindMapData, mindMapRef }: ExportOptions
                 maxY = Math.max(maxY, node.position.y + nodeHeight);
             });
 
-            // 添加边距
-            minX -= 100;
-            minY -= 100;
-            maxX += 100;
-            maxY += 100;
+            // 添加更大的边距，确保所有内容可见
+            minX -= 150;
+            minY -= 150;
+            maxX += 150;
+            maxY += 150;
 
             // 计算所需的缩放比例，使所有节点都可见
             const width = maxX - minX;
@@ -53,18 +56,18 @@ export default function ExportOptions({ mindMapData, mindMapRef }: ExportOptions
             const scaleX = containerWidth / width;
             const scaleY = containerHeight / height;
 
-            // 不要放大，只缩小
-            const scale = Math.min(0.8, Math.min(scaleX, scaleY));
+            // 使用更小的缩放比例，确保所有内容可见
+            const scale = Math.min(0.6, Math.min(scaleX, scaleY));
 
             // 设置视图以显示所有节点
             reactFlowInstance.setViewport({
                 x: -minX * scale + (containerWidth - width * scale) / 2,
                 y: -minY * scale + (containerHeight - height * scale) / 2,
-                zoom: scale * 0.95, // 稍微缩小一点，确保所有内容可见
+                zoom: scale * 0.9, // 进一步缩小，确保所有内容可见
             });
 
-            // 等待视图更新
-            await new Promise(resolve => setTimeout(resolve, 800));
+            // 等待视图更新 - 增加等待时间
+            await new Promise(resolve => setTimeout(resolve, 1000));
 
             return {
                 reactFlowInstance,
@@ -98,10 +101,10 @@ export default function ExportOptions({ mindMapData, mindMapRef }: ExportOptions
             const flowContainer = mindMapRef.current.querySelector('.react-flow');
             if (!flowContainer) throw new Error('找不到思维导图元素');
 
-            // 创建canvas
+            // 创建canvas - 优化配置
             const canvas = await html2canvas(flowContainer as HTMLElement, {
                 backgroundColor: '#ffffff',
-                scale: 2, // 提高导出质量
+                scale: 2.5, // 提高导出质量和分辨率
                 useCORS: true,
                 logging: false,
                 allowTaint: true,
@@ -113,7 +116,19 @@ export default function ExportOptions({ mindMapData, mindMapRef }: ExportOptions
                 ignoreElements: (element) => {
                     // 忽略控制按钮等UI元素
                     return element.classList.contains('react-flow__controls') ||
-                        element.classList.contains('react-flow__attribution');
+                        element.classList.contains('react-flow__attribution') ||
+                        element.classList.contains('react-flow__panel');
+                },
+                onclone: (clonedDoc) => {
+                    // 在克隆的文档中找到ReactFlow容器
+                    const clonedFlow = clonedDoc.querySelector('.react-flow');
+                    if (clonedFlow) {
+                        // 确保克隆的元素有足够的尺寸
+                        (clonedFlow as HTMLElement).style.width = '100%';
+                        (clonedFlow as HTMLElement).style.height = '100%';
+                        (clonedFlow as HTMLElement).style.overflow = 'visible';
+                    }
+                    return clonedDoc;
                 }
             });
 
@@ -134,104 +149,15 @@ export default function ExportOptions({ mindMapData, mindMapRef }: ExportOptions
         }
     };
 
-    // 导出为PDF
-    const exportAsPDF = async () => {
-        if (!mindMapRef.current || !mindMapData) return;
-
-        try {
-            setExporting(true);
-
-            // 准备导出
-            const viewState = await prepareForExport();
-
-            // 获取ReactFlow容器
-            const flowContainer = mindMapRef.current.querySelector('.react-flow');
-            if (!flowContainer) throw new Error('找不到思维导图元素');
-
-            // 创建canvas
-            const canvas = await html2canvas(flowContainer as HTMLElement, {
-                backgroundColor: '#ffffff',
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                allowTaint: true,
-                // 确保捕获整个内容
-                width: flowContainer.scrollWidth,
-                height: flowContainer.scrollHeight,
-                // 增加额外选项以提高质量
-                imageTimeout: 0,
-                ignoreElements: (element) => {
-                    // 忽略控制按钮等UI元素
-                    return element.classList.contains('react-flow__controls') ||
-                        element.classList.contains('react-flow__attribution');
-                }
-            });
-
-            // 获取图片数据
-            const imgData = canvas.toDataURL('image/png');
-
-            // 创建PDF
-            const pdf = new jsPDF({
-                orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
-                unit: 'mm',
-            });
-
-            // 计算PDF尺寸
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-
-            // 计算图像尺寸以适应PDF，留出10mm边距
-            const imgWidth = pdfWidth - 20;
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-            // 如果图像高度超过PDF高度，调整PDF格式
-            if (imgHeight > pdfHeight - 20) {
-                // 创建新的PDF，使用自定义尺寸
-                const newPdf = new jsPDF({
-                    orientation: 'portrait',
-                    unit: 'mm',
-                    format: [
-                        pdfWidth,
-                        imgHeight + 20 // 图像高度 + 20mm边距
-                    ]
-                });
-
-                newPdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
-                newPdf.save(`思维导图_${mindMapData.text}.pdf`);
-            } else {
-                pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
-                pdf.save(`思维导图_${mindMapData.text}.pdf`);
-            }
-
-            // 恢复视图
-            restoreView(viewState);
-        } catch (error) {
-            console.error('导出PDF失败:', error);
-            alert('导出PDF失败，请重试');
-        } finally {
-            setExporting(false);
-        }
-    };
-
     if (!mindMapData) return null;
 
     return (
-        <div className="flex space-x-2 mt-4">
-            <button
-                onClick={exportAsImage}
-                disabled={exporting}
-                className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center"
-            >
-                {exporting ? '导出中...' : '导出为图片'}
-            </button>
-
-            <button
-                onClick={exportAsPDF}
-                disabled={exporting}
-                className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center"
-            >
-                {exporting ? '导出中...' : '导出为PDF'}
-            </button>
-        </div>
+        <button
+            onClick={exportAsImage}
+            disabled={exporting}
+            className={`px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center ${className}`}
+        >
+            {exporting ? '导出中...' : '导出图片'}
+        </button>
     );
 }

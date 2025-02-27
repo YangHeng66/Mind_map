@@ -26,6 +26,13 @@ export interface MindMapNode {
     id: string;
     text: string;
     children?: MindMapNode[];
+    summary?: string;
+}
+
+// 思维导图结果类型
+export interface MindMapResult {
+    data: MindMapNode;
+    summary: string;
 }
 
 // DeepSeek API客户端
@@ -43,7 +50,7 @@ export class DeepSeekClient {
     }
 
     // 生成思维导图
-    async generateMindMap(topic: string, depth: number = 3, retries = 2): Promise<MindMapNode> {
+    async generateMindMap(topic: string, depth: number = 3, retries = 2): Promise<MindMapResult> {
         let lastError: any;
 
         for (let attempt = 0; attempt <= retries; attempt++) {
@@ -63,7 +70,7 @@ export class DeepSeekClient {
                         messages: [
                             {
                                 role: 'system',
-                                content: '你是一个专业的思维导图生成助手，擅长将主题拆解为结构化的思维导图。'
+                                content: '你是一个专业的思维导图生成助手，擅长将主题拆解为结构化的思维导图，并提供简洁有力的总结。'
                             },
                             {
                                 role: 'user',
@@ -71,7 +78,7 @@ export class DeepSeekClient {
                             }
                         ],
                         temperature: 0.7,
-                        max_tokens: 2000
+                        max_tokens: 2500
                     },
                     {
                         headers: {
@@ -88,13 +95,25 @@ export class DeepSeekClient {
                 }
 
                 const content = response.data.choices[0].message.content;
-                const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
 
-                if (jsonMatch && jsonMatch[1]) {
-                    return JSON.parse(jsonMatch[1]) as MindMapNode;
+                // 解析思维导图数据
+                const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
+                if (!jsonMatch || !jsonMatch[1]) {
+                    throw new Error('无法从响应中解析思维导图数据');
                 }
 
-                throw new Error('无法从响应中解析思维导图数据');
+                const mindMapData = JSON.parse(jsonMatch[1]) as MindMapNode;
+
+                // 解析总结
+                const summaryMatch = content.match(/## 总结\n\n([\s\S]*?)(\n##|\n```|$)/);
+                const summary = summaryMatch && summaryMatch[1]
+                    ? summaryMatch[1].trim()
+                    : '未能生成总结';
+
+                return {
+                    data: mindMapData,
+                    summary: summary
+                };
             } catch (error) {
                 lastError = error;
 
@@ -157,7 +176,11 @@ export class DeepSeekClient {
 3. 内容丰富且相关
 4. 严格按照JSON格式返回，不要添加额外的解释
 
-请直接返回JSON格式的思维导图数据，不要有其他内容。
+在思维导图数据之后，请提供一个简洁有力的总结，总结该主题的核心要点和关键见解。格式如下：
+
+## 总结
+
+[在这里提供200-300字的总结，概括主题的核心内容和关键见解]
 `;
     }
 }

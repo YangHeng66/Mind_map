@@ -10,9 +10,11 @@ import ReactFlow, {
     useEdgesState,
     ConnectionLineType,
     ReactFlowInstance,
+    Panel
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { MindMapNode } from '@/lib/deepseek';
+import ExportOptions from './ExportOptions';
 
 // 自定义节点样式 - 增大字体大小
 const nodeStyle = {
@@ -253,6 +255,13 @@ export default function MindMap({ data }: MindMapProps) {
             >
                 <Controls />
                 <Background color="#f8f8f8" gap={16} />
+                <Panel position="top-right">
+                    <ExportOptions
+                        mindMapData={data}
+                        mindMapRef={mindMapRef}
+                        className="text-xs py-1 px-2"
+                    />
+                </Panel>
             </ReactFlow>
         </div>
     );

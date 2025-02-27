@@ -21,12 +21,15 @@ export async function POST(request: NextRequest) {
         });
 
         // 使用Promise.race实现超时控制
-        const mindMapData = await Promise.race([
+        const result = await Promise.race([
             deepseekClient.generateMindMap(topic, depth),
             timeoutPromise
         ]) as any;
 
-        return NextResponse.json({ data: mindMapData });
+        return NextResponse.json({
+            data: result.data,
+            summary: result.summary
+        });
     } catch (error: any) {
         console.error('生成思维导图API错误:', error);
 
