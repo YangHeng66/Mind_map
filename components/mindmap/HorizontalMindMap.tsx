@@ -15,20 +15,20 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { MindMapNode } from '@/lib/deepseek';
 
-// 节点间距
-const childSpacing = 100;
+// 节点间距 - 减小垂直间距
+const childSpacing = 60;
 
-// 节点样式
+// 节点样式 - 调整为更小的节点
 const nodeStyle = {
-    padding: '8px 12px',
+    padding: '6px 12px',
     borderRadius: '30px', // 圆形节点
     border: '2px solid #ddd',
     fontSize: '14px',
     fontWeight: '500',
     boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
     textAlign: 'center' as const,
-    minWidth: '120px',
-    maxWidth: '250px',
+    minWidth: '100px', // 减小最小宽度
+    maxWidth: '200px', // 减小最大宽度
 };
 
 // 分支颜色 - 参考图片中的颜色
@@ -54,7 +54,7 @@ export default function HorizontalMindMap({ data }: MindMapProps) {
 
     // 计算节点文本的近似宽度（用于布局优化）
     const estimateTextWidth = (text: string) => {
-        return Math.max(120, text.length * 10); // 根据文本长度估计宽度
+        return Math.max(100, text.length * 8); // 减小文本宽度估计
     };
 
     // 将思维导图数据转换为ReactFlow节点和边
@@ -86,16 +86,16 @@ export default function HorizontalMindMap({ data }: MindMapProps) {
                 return sum + calculateSubtreeHeight(child, level + 1);
             }, 0);
 
-            // 根据层级增加额外空间
-            const levelFactor = Math.max(1, 1 + level * 0.2);
+            // 根据层级增加额外空间，但比之前更小
+            const levelFactor = Math.max(1, 1 + level * 0.1); // 减小层级因子
 
             return Math.max(1, totalChildrenHeight * levelFactor);
         };
 
         const maxDepth = getMaxDepth(data);
 
-        // 根据树的深度动态调整水平间距
-        const dynamicLevelSpacing = Math.max(250, 350 - (maxDepth * 20));
+        // 根据树的深度动态调整水平间距 - 增加水平间距
+        const dynamicLevelSpacing = Math.max(300, 400 - (maxDepth * 10)); // 增加基础水平间距
 
         // 预先计算整个树的高度，用于初始定位
         const totalTreeHeight = calculateSubtreeHeight(data, 0);
@@ -150,10 +150,10 @@ export default function HorizontalMindMap({ data }: MindMapProps) {
                 // 计算子树高度总和
                 const totalChildHeight = childHeights.reduce((sum, height) => sum + height, 0);
 
-                // 根据层级动态调整垂直间距
-                const levelMultiplier = Math.max(1, level * 0.5 + 1);
-                // 基础间距随层级和子节点数量增加
-                const baseSpacing = Math.max(childSpacing, 80 + (level * 20) + (childrenCount * 10));
+                // 根据层级动态调整垂直间距 - 减小垂直间距
+                const levelMultiplier = Math.max(1, level * 0.3 + 1); // 减小乘数
+                // 基础间距随层级和子节点数量增加，但比之前更小
+                const baseSpacing = Math.max(childSpacing, 50 + (level * 10) + (childrenCount * 5)); // 减小基础间距
                 const dynamicChildSpacing = baseSpacing * levelMultiplier;
 
                 // 计算子节点布局所需的总垂直空间
@@ -162,8 +162,8 @@ export default function HorizontalMindMap({ data }: MindMapProps) {
                 // 计算子节点的起始垂直位置
                 let startY = position.y - totalVerticalSpace / 2;
 
-                // 水平间距也随层级增加
-                const horizontalSpacing = dynamicLevelSpacing - (level * 20);
+                // 水平间距增加，确保节点向右扩充
+                const horizontalSpacing = dynamicLevelSpacing + (level * 30); // 增加水平间距
 
                 // 处理每个子节点
                 let currentY = startY;
@@ -213,7 +213,7 @@ export default function HorizontalMindMap({ data }: MindMapProps) {
         };
 
         // 从根节点开始处理 - 将根节点放在左侧中央
-        processNode(data, { x: 100, y: 0 });
+        processNode(data, { x: 50, y: 0 }); // 减小根节点的x坐标，使整个图向右扩展
 
         return { nodes, edges };
     }, []);
@@ -229,7 +229,7 @@ export default function HorizontalMindMap({ data }: MindMapProps) {
             setTimeout(() => {
                 if (reactFlowInstanceRef.current) {
                     reactFlowInstanceRef.current.fitView({
-                        padding: 0.3,
+                        padding: 0.2, // 减小内边距，使视图更紧凑
                         includeHiddenNodes: true,
                         minZoom: 0.1,
                         maxZoom: 1.5
@@ -246,7 +246,7 @@ export default function HorizontalMindMap({ data }: MindMapProps) {
         // 初始化时适应视图
         setTimeout(() => {
             instance.fitView({
-                padding: 0.3,
+                padding: 0.2, // 减小内边距，使视图更紧凑
                 includeHiddenNodes: true,
                 minZoom: 0.1,
                 maxZoom: 1.5
@@ -269,7 +269,7 @@ export default function HorizontalMindMap({ data }: MindMapProps) {
             attributionPosition="bottom-right"
             connectionLineType={ConnectionLineType.SmoothStep}
             defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
-            minZoom={0.1}
+            minZoom={0.05} // 允许更小的缩放以查看大型思维导图
             maxZoom={2}
         >
             <Background color="#f8f8f8" gap={16} />
