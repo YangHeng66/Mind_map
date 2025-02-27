@@ -15,8 +15,8 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { MindMapNode } from '@/lib/deepseek';
 
-// 节点间距 - 减小垂直间距
-const childSpacing = 60;
+// 节点间距 - 增加垂直间距
+const childSpacing = 80;
 
 // 节点样式 - 调整为更小的节点
 const nodeStyle = {
@@ -95,7 +95,7 @@ export default function HorizontalMindMap({ data }: MindMapProps) {
         const maxDepth = getMaxDepth(data);
 
         // 根据树的深度动态调整水平间距 - 增加水平间距
-        const dynamicLevelSpacing = Math.max(300, 400 - (maxDepth * 10)); // 增加基础水平间距
+        const dynamicLevelSpacing = Math.max(350, 450 - (maxDepth * 10)); // 进一步增加基础水平间距
 
         // 预先计算整个树的高度，用于初始定位
         const totalTreeHeight = calculateSubtreeHeight(data, 0);
@@ -150,10 +150,10 @@ export default function HorizontalMindMap({ data }: MindMapProps) {
                 // 计算子树高度总和
                 const totalChildHeight = childHeights.reduce((sum, height) => sum + height, 0);
 
-                // 根据层级动态调整垂直间距 - 减小垂直间距
-                const levelMultiplier = Math.max(1, level * 0.3 + 1); // 减小乘数
-                // 基础间距随层级和子节点数量增加，但比之前更小
-                const baseSpacing = Math.max(childSpacing, 50 + (level * 10) + (childrenCount * 5)); // 减小基础间距
+                // 根据层级动态调整垂直间距 - 确保足够的垂直间距
+                const levelMultiplier = Math.max(1, level * 0.3 + 1);
+                // 基础间距随层级和子节点数量增加，确保足够的空间
+                const baseSpacing = Math.max(childSpacing, 70 + (level * 15) + (childrenCount * 8)); // 增加基础间距
                 const dynamicChildSpacing = baseSpacing * levelMultiplier;
 
                 // 计算子节点布局所需的总垂直空间
@@ -180,14 +180,14 @@ export default function HorizontalMindMap({ data }: MindMapProps) {
                         y: currentY + childVerticalSpace / 2,
                     };
 
-                    // 添加边 - 使用分支颜色
+                    // 添加边 - 使用分支颜色和直线
                     const edgeColor = isRoot ? branchColors[i % branchColors.length] : branchColor;
 
                     edges.push({
                         id: `${node.id}-${child.id}`,
                         source: node.id,
                         target: child.id,
-                        type: 'smoothstep',
+                        type: 'smoothstep', //使用曲线连接
                         animated: false,
                         style: {
                             stroke: edgeColor,
@@ -267,9 +267,9 @@ export default function HorizontalMindMap({ data }: MindMapProps) {
             onInit={onInit}
             fitView
             attributionPosition="bottom-right"
-            connectionLineType={ConnectionLineType.SmoothStep}
+            connectionLineType={ConnectionLineType.Straight} // 改为直线连接
             defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
-            minZoom={0.05} // 允许更小的缩放以查看大型思维导图
+            minZoom={0.05}
             maxZoom={2}
         >
             <Background color="#f8f8f8" gap={16} />
